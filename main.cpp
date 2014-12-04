@@ -30,8 +30,8 @@ void segfault_sigaction(int signal, siginfo_t *si, void *arg)
 }
 
 
-void output(char *ansFileName, int* ans)
-{
+int blockSize(int n, int i, int commsize) {
+   return n / commsize + (i < (n % commsize));
 }
 
 
@@ -45,18 +45,19 @@ int main (int argc, char **argv)
     char logFileName[30];
     sprintf(logFileName, "log/mpi_lab3-proc%d.log", rank);
     isach_mpi::Logger::addLogger(rank, logFileName);
-    isach_mpi::Logger::getLogger(rank)->log("start\n");
 
     char* fileName = argv[1];
 
     isach_mpi::read_matrix_from_file(fileName, MPI_COMM_WORLD, &n, &m, &matrix_part);
-    isach_mpi::Logger::getLogger(rank)->log("matrix got\n");
+
+    int bockSizeN = blockSize(n, rank, size);
+    int bockSizeM = blockSize(m, rank, size);
 
     isach_mpi::Logger::getLogger(rank)->log("Before:\n");
-    for(int i = 0; i < n / 2; ++i) {
+    for(int i = 0; i < bockSizeN; ++i) {
         for(int j = 0; j < m; ++j) {
             char logmsg[20];
-            sprintf(logmsg, "%d ", matrix_part[i*m + j]);
+            sprintf(logmsg, COLOR_GREEN"%d ", matrix_part[i*m + j]);
             isach_mpi::Logger::getLogger(rank)->log(logmsg);
         }
         isach_mpi::Logger::getLogger(rank)->log("\n");
@@ -65,14 +66,14 @@ int main (int argc, char **argv)
     isach_mpi::transposition(&matrix_part, n, m, MPI_COMM_WORLD);
 
 
-    isach_mpi::Logger::getLogger(rank)->log("After:\n");
-    for(int i = 0; i < m ; ++i) {
+    isach_mpi::Logger::getLogger(rank)->log(COLOR_RESET"After:\n");
+    for(int i = 0; i < bockSizeM ; ++i) {
         for(int j = 0; j < n; ++j) {
             char logmsg[20];
-            sprintf(logmsg, "%d ", matrix_part[i*n + j]);
+            sprintf(logmsg, COLOR_RED"%d ", matrix_part[i*n + j]);
             isach_mpi::Logger::getLogger(rank)->log(logmsg);
         }
-        isach_mpi::Logger::getLogger(rank)->log("\n");
+        isach_mpi::Logger::getLogger(rank)->log(COLOR_RESET"\n");
     }
 
     MPI_Finalize();

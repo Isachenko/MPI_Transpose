@@ -17,16 +17,16 @@ void swap(int* a, int* b) {
 }
 
 void transpose(int* fromBuf, int* toBuf, int n, int m, int strideN, int strideM, int rank) {
-    isach_mpi::Logger::getLogger(rank)->log("fromBuf: \n");
+    //isach_mpi::Logger::getLogger(rank)->log("fromBuf: \n");
 
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < m; j++) {
-            isach_mpi::Logger::getLogger(rank)->log(" ");
-            isach_mpi::Logger::getLogger(rank)->log(fromBuf[j * strideN + i]);
+            //isach_mpi::Logger::getLogger(rank)->log(" ");
+            //isach_mpi::Logger::getLogger(rank)->log(fromBuf[j * strideN + i]);
             toBuf[i * strideM + j] = fromBuf[j * strideN + i];
         }
     }
-    isach_mpi::Logger::getLogger(rank)->log("\n");
+    //isach_mpi::Logger::getLogger(rank)->log("\n");
 }
 
 int blockSize(int n, int i, int commsize) {
@@ -42,10 +42,6 @@ void transposition(int** buf, int n, int m, MPI_Comm comm) {
     MPI_Comm_rank(newcomm, &rank);
     int commsize;
     MPI_Comm_size(newcomm, &commsize);
-
-    isach_mpi::Logger::getLogger(rank)->log("start transposition\n");
-
-
 
     for (int i = 0; i < commsize; i++) {
         if (i != rank) {
@@ -68,7 +64,7 @@ void transposition(int** buf, int n, int m, MPI_Comm comm) {
     int blockSizeN = blockSize(n, rank, commsize);
     int* rBuf = new int[blockSizeN * m];
     for (int i = 0; i < commsize; i++) {
-        int bigBlockCount = std::min(i, n % commsize);
+        int bigBlockCountM = std::min(i, m % commsize);
         int smallBlockSizeN = n / commsize;
         int smallBlockSizeM = m / commsize;
         int blockSizeM = blockSize(m, i, commsize);
@@ -82,14 +78,14 @@ void transposition(int** buf, int n, int m, MPI_Comm comm) {
             MPI_Type_commit(&tmatrix);
 
             MPI_Status status;
-            //ToDo:: smeshenie do i posle raznoe;
-            MPI_Recv(rBuf + i * smallBlockSizeM + bigBlockCount, 1, tmatrix, i, TAG_BLOCK, newcomm, &status);
+            MPI_Recv(rBuf + i * smallBlockSizeM + bigBlockCountM, 1, tmatrix, i, TAG_BLOCK, newcomm, &status);
 
             MPI_Type_free(&tmatrix);
             MPI_Type_free(&raw);
         }  else {
-            int bigBlockCount = std::min(i, n % commsize);
-            transpose(*buf + rank * smallBlockSizeN + bigBlockCount, rBuf + rank * smallBlockSizeM + bigBlockCount, blockSizeN, blockSizeM, n, m, rank);
+            int bigBlockCountN = std::min(i, n % commsize);
+            int bigBlockCountM = std::min(i, m % commsize);
+            transpose(*buf + rank * smallBlockSizeN + bigBlockCountN, rBuf + rank * smallBlockSizeM + bigBlockCountM, blockSizeN, blockSizeM, n, m, rank);
         }
     }
     delete *buf;
